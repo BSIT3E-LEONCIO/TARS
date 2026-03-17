@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="warmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D67554" />
+      <stop offset="100%" stop-color="#B85233" />
+    </linearGradient>
+    
+    <g id="mod-dot">
+      <circle cx="0" cy="0" r="14" fill="url(#warmGrad)" stroke="#812E15" stroke-width="4.5" />
+    </g>
+  </defs>
+
+  <style>
+    .tars-text-mod {
+      font-family: 'Montserrat', 'Futura', 'Trebuchet MS', sans-serif;
+      font-weight: 900;
+      font-size: 160px;
+      fill: url(#warmGrad);
+      stroke: #812E15;
+      stroke-width: 6px;
+      stroke-linejoin: miter; /* Sharper geometric edges */
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+  </style>
+
+  <g transform="translate(135, 0)">
+    <text x="0" y="150" class="tars-text-mod">T</text>
+    <text x="0" y="310" class="tars-text-mod">A</text>
+    <text x="0" y="470" class="tars-text-mod">R</text>
+    <text x="0" y="630" class="tars-text-mod">S</text>
+  </g>
+
+  <g transform="translate(275, 0)">
+    <use href="#mod-dot" x="42" y="120" /> 
+    <use href="#mod-dot" x="0"  y="150" /> 
+    <use href="#mod-dot" x="42" y="150" /> 
+    <use href="#mod-dot" x="0"  y="180" /> 
+
+    <use href="#mod-dot" x="0"  y="280" /> 
+
+    <use href="#mod-dot" x="0"  y="440" /> 
+    <use href="#mod-dot" x="0"  y="470" /> 
+    <use href="#mod-dot" x="42" y="470" /> 
+    <use href="#mod-dot" x="0"  y="500" /> 
+
+    <use href="#mod-dot" x="42" y="600" /> 
+    <use href="#mod-dot" x="0"  y="630" /> 
+    <use href="#mod-dot" x="0"  y="660" /> 
+  </g>
+</svg>
