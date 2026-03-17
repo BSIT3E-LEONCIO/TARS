@@ -15,7 +15,6 @@ type ChatMessage = {
 type VoiceProfile = {
   locale: string;
   label: string;
-  gender: "male" | "female";
 };
 
 type PersonaKey = "commander" | "engineer" | "companion" | "operator" | "observer";
@@ -41,7 +40,7 @@ type AssistantCommandResult = {
   ackText?: string;
 };
 
-const DEFAULT_VOICE_PROFILE: VoiceProfile = { locale: "en-US", label: "ENGLISH (US)", gender: "male" };
+const DEFAULT_VOICE_PROFILE: VoiceProfile = { locale: "en-US", label: "ENGLISH (US)" };
 
 const DEFAULT_PERSONALITY: PersonalitySettings = {
   humor: 55,
@@ -90,28 +89,28 @@ const PERSONA_PRESETS: Record<PersonaKey, PersonaPreset> = {
 };
 
 const VOICE_LANGUAGE_PATTERNS: Array<{ pattern: RegExp; profile: VoiceProfile }> = [
-  { pattern: /english|original|american/i, profile: { locale: "en-US", label: "ENGLISH (US)", gender: "male" } },
-  { pattern: /british|uk english|england/i, profile: { locale: "en-GB", label: "ENGLISH (UK)", gender: "male" } },
-  { pattern: /australian|aussie/i, profile: { locale: "en-AU", label: "ENGLISH (AU)", gender: "male" } },
-  { pattern: /canadian english|canadian/i, profile: { locale: "en-CA", label: "ENGLISH (CA)", gender: "male" } },
-  { pattern: /indian english/i, profile: { locale: "en-IN", label: "ENGLISH (IN)", gender: "male" } },
-  { pattern: /spanish|espanol/i, profile: { locale: "es-ES", label: "SPANISH", gender: "male" } },
-  { pattern: /french|francais/i, profile: { locale: "fr-FR", label: "FRENCH", gender: "male" } },
-  { pattern: /german|deutsch/i, profile: { locale: "de-DE", label: "GERMAN", gender: "male" } },
-  { pattern: /italian|italiano/i, profile: { locale: "it-IT", label: "ITALIAN", gender: "male" } },
-  { pattern: /portuguese brazil|brazilian portuguese/i, profile: { locale: "pt-BR", label: "PORTUGUESE (BR)", gender: "male" } },
-  { pattern: /portuguese|portugues/i, profile: { locale: "pt-PT", label: "PORTUGUESE", gender: "male" } },
-  { pattern: /filipino|tagalog/i, profile: { locale: "fil-PH", label: "FILIPINO", gender: "male" } },
-  { pattern: /indonesian|bahasa indonesia/i, profile: { locale: "id-ID", label: "INDONESIAN", gender: "male" } },
-  { pattern: /japanese|nihongo|japan/i, profile: { locale: "ja-JP", label: "JAPANESE", gender: "male" } },
-  { pattern: /korean|hangul|hangugeo/i, profile: { locale: "ko-KR", label: "KOREAN", gender: "male" } },
-  { pattern: /chinese|mandarin|simplified chinese/i, profile: { locale: "zh-CN", label: "CHINESE", gender: "male" } },
-  { pattern: /traditional chinese|taiwanese/i, profile: { locale: "zh-TW", label: "CHINESE (TRADITIONAL)", gender: "male" } },
-  { pattern: /arabic/i, profile: { locale: "ar-SA", label: "ARABIC", gender: "male" } },
-  { pattern: /hindi/i, profile: { locale: "hi-IN", label: "HINDI", gender: "male" } },
-  { pattern: /russian/i, profile: { locale: "ru-RU", label: "RUSSIAN", gender: "male" } },
-  { pattern: /thai/i, profile: { locale: "th-TH", label: "THAI", gender: "male" } },
-  { pattern: /vietnamese|tieng viet/i, profile: { locale: "vi-VN", label: "VIETNAMESE", gender: "male" } },
+  { pattern: /english|original|american/i, profile: { locale: "en-US", label: "ENGLISH (US)" } },
+  { pattern: /british|uk english|england/i, profile: { locale: "en-GB", label: "ENGLISH (UK)" } },
+  { pattern: /australian|aussie/i, profile: { locale: "en-AU", label: "ENGLISH (AU)" } },
+  { pattern: /canadian english|canadian/i, profile: { locale: "en-CA", label: "ENGLISH (CA)" } },
+  { pattern: /indian english/i, profile: { locale: "en-IN", label: "ENGLISH (IN)" } },
+  { pattern: /spanish|espanol/i, profile: { locale: "es-ES", label: "SPANISH" } },
+  { pattern: /french|francais/i, profile: { locale: "fr-FR", label: "FRENCH" } },
+  { pattern: /german|deutsch/i, profile: { locale: "de-DE", label: "GERMAN" } },
+  { pattern: /italian|italiano/i, profile: { locale: "it-IT", label: "ITALIAN" } },
+  { pattern: /portuguese brazil|brazilian portuguese/i, profile: { locale: "pt-BR", label: "PORTUGUESE (BR)" } },
+  { pattern: /portuguese|portugues/i, profile: { locale: "pt-PT", label: "PORTUGUESE" } },
+  { pattern: /filipino|tagalog/i, profile: { locale: "fil-PH", label: "FILIPINO" } },
+  { pattern: /indonesian|bahasa indonesia/i, profile: { locale: "id-ID", label: "INDONESIAN" } },
+  { pattern: /japanese|nihongo|japan/i, profile: { locale: "ja-JP", label: "JAPANESE" } },
+  { pattern: /korean|hangul|hangugeo/i, profile: { locale: "ko-KR", label: "KOREAN" } },
+  { pattern: /chinese|mandarin|simplified chinese/i, profile: { locale: "zh-CN", label: "CHINESE" } },
+  { pattern: /traditional chinese|taiwanese/i, profile: { locale: "zh-TW", label: "CHINESE (TRADITIONAL)" } },
+  { pattern: /arabic/i, profile: { locale: "ar-SA", label: "ARABIC" } },
+  { pattern: /hindi/i, profile: { locale: "hi-IN", label: "HINDI" } },
+  { pattern: /russian/i, profile: { locale: "ru-RU", label: "RUSSIAN" } },
+  { pattern: /thai/i, profile: { locale: "th-TH", label: "THAI" } },
+  { pattern: /vietnamese|tieng viet/i, profile: { locale: "vi-VN", label: "VIETNAMESE" } },
 ];
 
 const createMessage = (sender: "user" | "tars", text: string): ChatMessage => ({
@@ -401,44 +400,20 @@ const Chat = () => {
       };
     }
 
-    const genderPattern = /(set|use|switch to)\s+(male|female)\s+(voice)?/i;
-    const genderMatch = normalized.match(genderPattern);
-    if (genderMatch) {
-      const gender = genderMatch[2] as "male" | "female";
-      setVoiceProfile((prev) => ({ ...prev, gender }));
-      return {
-        acknowledged: true,
-        ackText: `${gender.toUpperCase()} voice preference applied for ${voiceProfile.label}.`,
-      };
-    }
-
     return { acknowledged: false };
   };
 
-  const resolvePreferredVoice = (voices: SpeechSynthesisVoice[], lang: string, gender: "male" | "female") => {
+  const resolvePreferredVoice = (voices: SpeechSynthesisVoice[], lang: string) => {
     const langLower = lang.toLowerCase();
     const langRoot = langLower.split("-")[0];
-    
-    const maleHints = /male|david|guy|mark|george|daniel|tom|oliver|bruno|carlos|lucas|rishi|dimitri|kyoko.*male|yuki.*male|neural.*male|en-us-neural-1/i;
-    const femaleHints = /female|zira|aria|susan|eva|samantha|siri|victoria|karen|moira|madeline|victoria|emily|olivia|elizabeth|jessica|neural.*female|en-us-neural-2/i;
-    const genderHints = gender === "male" ? maleHints : femaleHints;
-
-    const exact = voices.find((v) => v.lang.toLowerCase() === langLower && genderHints.test(v.name));
+    const exact = voices.find((v) => v.lang.toLowerCase() === langLower);
     if (exact) return exact;
 
-    const langMatch = voices.find((v) => v.lang.toLowerCase() === langLower);
-    if (langMatch && gender === "female") return langMatch;
-
-    const langRootMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langRoot) && genderHints.test(v.name));
+    const langRootMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langRoot));
     if (langRootMatch) return langRootMatch;
 
     const langRootAny = voices.find((v) => v.lang.toLowerCase().startsWith(langRoot));
     if (langRootAny) return langRootAny;
-
-    if (gender === "male") {
-      const maleAny = voices.find((v) => maleHints.test(v.name));
-      if (maleAny) return maleAny;
-    }
 
     return voices[0];
   };
@@ -531,7 +506,6 @@ const Chat = () => {
     speechJobRef.current = speechJob;
     const activeLang = languageOverride ?? resolvedSpeechLang;
     const activePersona = isEnglishLocale(activeLang) ? PERSONA_PRESETS[persona] : PERSONA_PRESETS.commander;
-
     const voices = await ensureVoicesReady();
     if (speechJobRef.current !== speechJob) {
       return;
@@ -548,7 +522,7 @@ const Chat = () => {
       utterance.volume = 0.94;
       utterance.lang = activeLang;
 
-      const preferredVoice = fallback ? null : resolvePreferredVoice(voices, activeLang, voiceProfile.gender);
+      const preferredVoice = fallback ? null : resolvePreferredVoice(voices, activeLang);
       if (preferredVoice) {
         utterance.voice = preferredVoice;
       }
@@ -667,21 +641,15 @@ const Chat = () => {
       const voiceCommand = parseVoiceCommand(trimmed);
       if (voiceCommand) {
         const profile = voiceCommand === "reset" ? DEFAULT_VOICE_PROFILE : voiceCommand;
-        const requestedGender = /\b(female|woman|girl|lady)\b/i.test(trimmed)
-          ? "female"
-          : /\b(male|man|boy|gentleman)\b/i.test(trimmed)
-            ? "male"
-            : profile.gender;
-        const resolvedProfile = { ...profile, gender: requestedGender };
-        setVoiceProfile(resolvedProfile);
+        setVoiceProfile(profile);
         const ack =
           voiceCommand === "reset"
             ? "Voice profile restored. Original TARS English channel is online."
-            : `Voice profile switched to ${resolvedProfile.label} (${resolvedProfile.gender}). I will continue in this language.`;
+            : `Voice profile switched to ${profile.label}. I will continue in this language.`;
         const ackMessage = createMessage("tars", ack);
         setMessages((prev) => [...prev, ackMessage]);
         setTyping(false);
-        speakAsTars(ack, ackMessage.id, resolvedProfile.locale);
+        speakAsTars(ack, ackMessage.id, profile.locale);
         return;
       }
 
@@ -707,7 +675,6 @@ const Chat = () => {
           ...personality,
           persona: activePersona,
           speechLang: voiceProfile.locale,
-          gender: voiceProfile.gender,
         },
         controller.signal,
       );
@@ -829,13 +796,13 @@ const Chat = () => {
           ))}
 
           {typing && (
-            <div className="rounded-lg border border-cyan-300/40 bg-gradient-to-r from-cyan-950/30 to-cyan-900/15 px-4 py-3 text-sm text-cyan-100/85 shadow-md shadow-cyan-950/20 font-mono">
+            <div className="rounded-lg border border-cyan-300/40 bg-linear-to-r from-cyan-950/30 to-cyan-900/15 px-4 py-3 text-sm text-cyan-100/85 shadow-md shadow-cyan-950/20 font-mono">
               <span className="inline-block animate-pulse">▌</span> TARS is computing trajectory...
             </div>
           )}
 
           {error && (
-            <div className="rounded-lg border border-red-400/50 bg-gradient-to-r from-red-950/40 to-red-900/20 px-4 py-3 text-sm text-red-200/90 shadow-md shadow-red-950/30 font-mono">
+            <div className="rounded-lg border border-red-400/50 bg-linear-to-r from-red-950/40 to-red-900/20 px-4 py-3 text-sm text-red-200/90 shadow-md shadow-red-950/30 font-mono">
               ⚠ Uplink error: {error}
             </div>
           )}

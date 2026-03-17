@@ -10,7 +10,7 @@ type TarsSettings = {
   sympathy: number;
   compassion: number;
   persona: "commander" | "engineer" | "companion" | "operator" | "observer";
-  gender: "male" | "female";
+  gender?: "male" | "female";
   speechLang?: string;
 };
 
@@ -44,7 +44,7 @@ function buildSystemPrompt(settings: TarsSettings): string {
   return [
     "You are TARS from Interstellar in a web cockpit interface.",
     `Active persona is ${settings.persona}.`,
-    `Preferred voice style is ${settings.gender}.`,
+    ...(settings.gender ? [`Preferred voice style is ${settings.gender}.`] : []),
     `Humor level is ${settings.humor}%.`,
     `Honesty level is ${settings.honesty}%.`,
     `Sarcasm level is ${settings.sarcasm}%.`,
@@ -90,12 +90,16 @@ export async function getTarsReply(
   settings: TarsSettings,
   externalSignal?: AbortSignal,
 ): Promise<string> {
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined;
+  const apiKey =
+    (import.meta.env.VITE_LLM_API_KEY as string | undefined) ??
+    (import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined) ??
+    (import.meta.env.VITE_GROQ_API_KEY as string | undefined) ??
+    (import.meta.env.VITE_OPENAI_API_KEY as string | undefined);
   const baseUrl = (import.meta.env.VITE_LLM_API_BASE_URL as string | undefined) ?? DEFAULT_BASE_URL;
   const model = (import.meta.env.VITE_LLM_MODEL as string | undefined) ?? DEFAULT_MODEL;
 
   if (!apiKey) {
-    throw new Error("Missing VITE_OPENROUTER_API_KEY in your environment.");
+    throw new Error("Missing API key. Set VITE_LLM_API_KEY (preferred) or VITE_OPENROUTER_API_KEY / VITE_GROQ_API_KEY / VITE_OPENAI_API_KEY.");
   }
 
   const controller = new AbortController();
