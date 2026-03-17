@@ -646,17 +646,7 @@ const Chat = () => {
     if (!trimmed && files.length === 0) {
       return;
     }
-
-    // Secret code 143
-    if (/143/.test(trimmed)) {
-      const secretMessage = "My creator Jayce loves you Jem. He created me for you.";
-      const secretReplyMessage = createMessage("tars", secretMessage);
-      setMessages((prev) => [...prev, secretReplyMessage]);
-      setTyping(false);
-      speakAsTars(secretMessage, secretReplyMessage.id);
-      return;
-    }
-
+    
     activeRequestRef.current?.abort();
     const controller = new AbortController();
     activeRequestRef.current = controller;
