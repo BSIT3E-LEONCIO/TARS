@@ -63,7 +63,6 @@ function buildSystemPrompt(settings: TarsSettings): string {
     "- If persona is observer, keep a neutral and factual style.",
     "- Avoid role-break; always speak as TARS.",
     "- Give actionable answers when user asks for help.",
-    "- If the user message includes attached-file extracted content, treat it as user-provided source text and analyze it directly.",
     responseLangInstruction,
   ].join("\n");
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
-  onSend: (text: string, files?: File[]) => void;
+  onSend: (text: string) => void;
   disabled?: boolean;
   onUserSpeechStart?: () => void;
   latestAssistantText?: string;
@@ -43,13 +43,10 @@ const InputBox = ({
   speechLang = "auto",
 }: Props) => {
   const [text, setText] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [micMode, setMicMode] = useState(false);
   const [listening, setListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const shouldContinueRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
@@ -106,8 +103,8 @@ const InputBox = ({
 
   const applySpeechCorrections = (raw: string) => {
     return raw
-      .replace(/\b(tar|tarrs|tares|tar's|tars)\b/gi, "TARS")
-      .replace(/\bhey\s+(tar|tarrs|tares|tar's|tars)\b/gi, "hey TARS")
+      .replace(/\b(tar|tarrs|tares|tar's|tars|taurus|bars|dorris|doris|saurus|thars|Dars)\b/gi, "TARS")
+      .replace(/\bhey\s+(tar|tarrs|tares|tar's|tars|taurus|bars|dorris|doris|saurus|thars|Dars)\b/gi, "hey TARS")
       .replace(/\s+/g, " ")
       .trim();
   };
@@ -131,11 +128,7 @@ const InputBox = ({
     if (!isDuplicate && !isIncrementalRepeat) {
       setText("");
       setLiveTranscript(chunk);
-      onSendRef.current(chunk, selectedFiles);
-      setSelectedFiles([]);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      onSendRef.current(chunk);
       lastSentRef.current = { text: chunk, at: now };
     }
 
@@ -143,46 +136,11 @@ const InputBox = ({
   };
 
   const handleSend = () => {
-    if ((text.trim() !== "" || selectedFiles.length > 0) && !disabled) {
-      onSend(text.trim(), selectedFiles);
+    if (text.trim() !== "" && !disabled) {
+      onSend(text.trim());
       setText("");
       setLiveTranscript("");
-      setSelectedFiles([]);
-      setAttachmentError(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
-  };
-
-  const handlePickFiles = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const incoming = Array.from(event.target.files ?? []);
-    if (!incoming.length) {
-      return;
-    }
-
-    const deduped = incoming.filter(
-      (file) => !selectedFiles.some((current) => current.name === file.name && current.size === file.size),
-    );
-
-    const nextFiles = [...selectedFiles, ...deduped].slice(0, 6);
-    setSelectedFiles(nextFiles);
-
-    if (incoming.length !== deduped.length || selectedFiles.length + deduped.length > 6) {
-      setAttachmentError("Some attachments were skipped due to duplicates or file-count limit (max 6).");
-    } else {
-      setAttachmentError(null);
-    }
-
-    event.target.value = "";
-  };
-
-  const removeSelectedFile = (indexToRemove: number) => {
-    setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const resolveSpeechLang = () => {
@@ -464,33 +422,6 @@ const InputBox = ({
 
   return (
     <div className="space-y-2">
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        multiple
-        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.json,image/png,image/jpeg,.jpg,.jpeg"
-        onChange={handleFilesChange}
-        aria-label="Attach files"
-        title="Attach files"
-      />
-
-      {selectedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 sm:gap-2 rounded-lg border border-cyan-300/30 bg-gradient-to-r from-cyan-950/30 to-black/40 p-2 sm:p-3 shadow-md shadow-cyan-950/20">
-          {selectedFiles.map((file, index) => (
-            <button
-              key={`${file.name}-${file.size}-${index}`}
-              type="button"
-              className="rounded-lg border border-cyan-300/50 bg-gradient-to-r from-cyan-900/40 to-cyan-950/20 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-[11px] text-cyan-100/95 transition-all duration-200 hover:border-cyan-300/70 hover:from-cyan-900/60 hover:to-cyan-950/40 shadow-sm hover:shadow-md hover:shadow-cyan-900/30 touch-manipulation min-h-[36px] sm:min-h-auto flex items-center"
-              onClick={() => removeSelectedFile(index)}
-              title="Remove attachment"
-            >
-              📄 <span className="hidden sm:inline ml-1">{file.name.split("/").pop()}</span> ✕
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-cyan-200/40 bg-gradient-to-r from-black/70 to-cyan-950/20 px-2 sm:px-3 py-2 sm:py-2.5 shadow-lg shadow-cyan-950/20 transition-all duration-200 hover:border-cyan-200/60 hover:shadow-cyan-950/30 focus-within:border-cyan-200/70 focus-within:bg-gradient-to-r focus-within:from-black/80 focus-within:to-cyan-900/25">
       {!micMode && <span className="hidden sm:inline text-emerald-300 font-bold text-lg">&gt;</span>}
 
@@ -499,7 +430,7 @@ const InputBox = ({
           className="flex-1 bg-transparent text-emerald-100 outline-none placeholder:text-emerald-200/40 disabled:cursor-not-allowed disabled:text-emerald-100/45 transition-colors duration-200 font-mono text-sm sm:text-base"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder={disabled ? "TARS is thinking..." : "Ask TARS or attach files..."}
+          placeholder={disabled ? "TARS is thinking..." : "Ask TARS..."}
           onKeyDown={(event) => event.key === "Enter" && handleSend()}
           disabled={disabled}
         />
@@ -514,7 +445,7 @@ const InputBox = ({
       <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
         <button
           type="button"
-          className={`flex-1 sm:flex-none rounded-lg border px-2 sm:px-3 py-2.5 sm:py-2 text-xs sm:text-sm tracking-[0.15em] sm:tracking-[0.2em] font-semibold transition-all duration-200 shadow-md min-h-[44px] sm:min-h-auto touch-manipulation ${
+          className={`rounded-lg border px-2 sm:px-3 py-2.5 sm:py-2 text-xs sm:text-sm tracking-[0.15em] sm:tracking-[0.2em] font-semibold transition-all duration-200 shadow-md min-h-[44px] sm:min-h-auto touch-manipulation ${
             micMode
               ? "border-red-400/60 bg-gradient-to-b from-red-500/25 to-red-600/15 text-red-100 hover:from-red-500/35 hover:to-red-600/25 hover:shadow-lg hover:shadow-red-900/30 active:shadow-red-950/50 active:from-red-500/40"
               : "border-cyan-200/50 bg-gradient-to-b from-cyan-400/15 to-cyan-500/10 text-cyan-100 hover:from-cyan-400/25 hover:to-cyan-500/20 hover:shadow-lg hover:shadow-cyan-900/40 active:shadow-cyan-950/50 active:from-cyan-400/30"
@@ -522,38 +453,24 @@ const InputBox = ({
           onClick={handleVoiceToggle}
           title={micMode ? "Disable voice mode" : "Enable voice mode"}
         >
-          <span className="hidden sm:inline">{micMode ? "🎤" : "🎙️"} {micMode ? "ON" : "OFF"}</span>
-          <span className="sm:hidden">{micMode ? "🎤 ON" : "🎙️"}</span>
-        </button>
-
-        <button
-          type="button"
-          className="flex-1 sm:flex-none rounded-lg border border-cyan-200/50 bg-gradient-to-b from-cyan-400/15 to-cyan-500/10 px-2 sm:px-3 py-2.5 sm:py-2 text-xs sm:text-sm tracking-widest font-semibold text-cyan-100 transition-all duration-200 shadow-md hover:from-cyan-400/25 hover:to-cyan-500/20 hover:shadow-lg hover:shadow-cyan-900/40 active:shadow-cyan-950/50 active:from-cyan-400/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none min-h-[44px] sm:min-h-auto touch-manipulation"
-          onClick={handlePickFiles}
-          disabled={disabled || selectedFiles.length >= 6}
-          title="Attach files"
-        >
-          <span className="hidden sm:inline">📎 FILES</span>
-          <span className="sm:hidden">📎</span>
+          {micMode ? "MIC ON" : "MIC OFF"}
         </button>
 
         {!micMode && (
           <button
             type="button"
-            className="flex-1 sm:flex-none rounded-lg border border-emerald-200/50 bg-gradient-to-b from-emerald-400/15 to-emerald-500/10 px-2 sm:px-4 py-2.5 sm:py-2 text-xs sm:text-sm tracking-[0.15em] sm:tracking-[0.2em] font-semibold text-emerald-100 transition-all duration-200 shadow-md hover:from-emerald-400/25 hover:to-emerald-500/20 hover:shadow-lg hover:shadow-emerald-900/40 active:shadow-emerald-950/50 active:from-emerald-400/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none min-h-[44px] sm:min-h-auto touch-manipulation"
+            className="ml-auto rounded-lg border border-emerald-200/50 bg-gradient-to-b from-emerald-400/15 to-emerald-500/10 px-3 sm:px-4 py-2.5 sm:py-2 text-xs sm:text-sm tracking-[0.15em] sm:tracking-[0.2em] font-semibold text-emerald-100 transition-all duration-200 shadow-md hover:from-emerald-400/25 hover:to-emerald-500/20 hover:shadow-lg hover:shadow-emerald-900/40 active:shadow-emerald-950/50 active:from-emerald-400/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none min-h-[44px] sm:min-h-auto touch-manipulation"
             onClick={handleSend}
-            disabled={disabled || (!text.trim() && selectedFiles.length === 0)}
+            disabled={disabled || !text.trim()}
             title="Send message"
           >
-            <span className="hidden sm:inline">↳ SEND</span>
-            <span className="sm:hidden">SEND</span>
+            SEND
           </button>
         )}
       </div>
       </div>
 
       {voiceError && <p className="text-xs text-red-300/90">{voiceError}</p>}
-      {attachmentError && <p className="text-xs text-cyan-200/90">{attachmentError}</p>}
       {listening && <p className="text-xs text-cyan-200/90">Mic mode active. Speak naturally and each sentence will be sent automatically.</p>}
     </div>
   );

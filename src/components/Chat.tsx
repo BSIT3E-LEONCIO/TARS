@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import InputBox from "./InputBox";
 import Message from "./Message";
 import { getTarsReply } from "../lib/tarsApi";
-import { composeAttachmentBlock, formatBytes, prepareAttachment, type PreparedAttachment } from "../lib/attachments";
 import Waveform from "./Waveform.tsx";
 import tarsLogo from "../assets/tars.svg";
 
@@ -55,8 +54,8 @@ const PERSONA_PRESETS: Record<PersonaKey, PersonaPreset> = {
     key: "commander",
     label: "COMMANDER",
     description: "Calm, authoritative, strategic guidance.",
-    rate: 1,
-    pitch: 0.74,
+    rate: 1.1,
+    pitch: 1.1,
   },
   engineer: {
     key: "engineer",
@@ -184,7 +183,9 @@ const Chat = () => {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [spokenWords, setSpokenWords] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const scrollFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageElementMapRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const autoFollowRef = useRef(true);
   const lastKaraokeScrollAtRef = useRef(0);
@@ -484,6 +485,15 @@ const Chat = () => {
       return;
     }
 
+    // Show scrollbar on scroll
+    setIsScrolling(true);
+    if (scrollFadeTimeoutRef.current) {
+      window.clearTimeout(scrollFadeTimeoutRef.current);
+    }
+    scrollFadeTimeoutRef.current = window.setTimeout(() => {
+      setIsScrolling(false);
+    }, 2500);
+
     if (assistantSpeaking) {
       return;
     }
@@ -585,39 +595,9 @@ const Chat = () => {
     speakAttempt(false);
   };
 
-  const summarizeAttachments = (attachments: PreparedAttachment[]) => {
-    if (!attachments.length) {
-      return "";
-    }
-
-    return attachments
-      .map((attachment) => {
-        const base = `[file] ${attachment.name} (${attachment.kind}, ${formatBytes(attachment.size)})`;
-        const ocrPreview = attachment.extractedText
-          ? `\n  [extracted] ${attachment.extractedText.slice(0, 180)}${attachment.extractedText.length > 180 ? "..." : ""}`
-          : "";
-        const note = attachment.note ? `\n  [note] ${attachment.note}` : "";
-        return `${base}${ocrPreview}${note}`;
-      })
-      .join("\n");
-  };
-
-  const buildAttachmentEnhancedInput = (text: string, attachments: PreparedAttachment[]) => {
-    if (!attachments.length) {
-      return text;
-    }
-
-    const block = composeAttachmentBlock(attachments);
-    if (!block) {
-      return text;
-    }
-
-    return [text || "Analyze the attached files.", "", block].join("\n").trim();
-  };
-
-  const sendMessage = async (text: string, files: File[] = []) => {
+  const sendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed && files.length === 0) {
+    if (!trimmed) {
       return;
     }
 
@@ -634,13 +614,7 @@ const Chat = () => {
     activeRequestRef.current?.abort();
     const controller = new AbortController();
     activeRequestRef.current = controller;
-
-    const preparedAttachments = files.length
-      ? await Promise.all(files.map((file) => prepareAttachment(file)))
-      : [];
-
-    const displayText = [trimmed, summarizeAttachments(preparedAttachments)].filter(Boolean).join("\n").trim();
-    const userMessage: ChatMessage = createMessage("user", displayText || "[attachments]");
+    const userMessage: ChatMessage = createMessage("user", trimmed);
 
     const nextDisplayConversation = [...messages, userMessage];
     setMessages(nextDisplayConversation);
@@ -672,10 +646,9 @@ const Chat = () => {
         return;
       }
 
-      const attachmentEnhancedText = buildAttachmentEnhancedInput(trimmed, preparedAttachments);
       const nextModelConversation: ChatMessage[] = [
         ...messages,
-        createMessage("user", attachmentEnhancedText),
+        createMessage("user", trimmed),
       ];
 
       const activePersona = isEnglishLocale(voiceProfile.locale) ? persona : "observer";
@@ -758,6 +731,9 @@ const Chat = () => {
       }
       stopRadioFx();
       activeRequestRef.current?.abort();
+      if (scrollFadeTimeoutRef.current) {
+        window.clearTimeout(scrollFadeTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -782,7 +758,7 @@ const Chat = () => {
       <div
         ref={viewportRef}
         onScroll={handleViewportScroll}
-        className="relative z-10 flex-1 min-h-0 overflow-y-auto pr-1"
+        className={`chat-viewport relative z-10 flex-1 min-h-0 overflow-y-auto pr-1 ${isScrolling ? "scrolling" : ""}`}
       >
         <div className="space-y-3 pb-2">
           {messages.map((msg, index) => (

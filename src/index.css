@@ -146,3 +146,37 @@ body {
 	}
 }
 
+/* Modern thin scrollbar with fade effect */
+.chat-viewport {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(111, 242, 255, 0) transparent;
+	transition: scrollbar-color 300ms ease;
+}
+
+.chat-viewport::-webkit-scrollbar {
+	width: 6px;
+}
+
+.chat-viewport::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.chat-viewport::-webkit-scrollbar-thumb {
+	background: rgba(111, 242, 255, 0);
+	border-radius: 3px;
+	transition: background 300ms ease;
+}
+
+.chat-viewport::-webkit-scrollbar-thumb:hover {
+	background: rgba(111, 242, 255, 0.6);
+}
+
+/* Show scrollbar when scrolling */
+.chat-viewport.scrolling {
+	scrollbar-color: rgba(111, 242, 255, 0.5) transparent;
+}
+
+.chat-viewport.scrolling::-webkit-scrollbar-thumb {
+	background: rgba(111, 242, 255, 0.5);
+}
+
