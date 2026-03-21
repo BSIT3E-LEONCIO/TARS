@@ -6,6 +6,8 @@ Interstellar-inspired TARS interface built with React + Vite + TypeScript + Tail
 
 - Cinematic cockpit UI inspired by Endurance ship consoles.
 - Live AI chat via OpenAI-compatible Chat Completions API.
+- Browser TTS with British voice preference (Ryan/UK fallback).
+- Optional Edge TTS MP3 generation endpoint at /api/tts/generate.
 - Humor and Honesty controls that affect TARS behavior.
 - Typewriter-like terminal feel with mission status indicators.
 
@@ -38,6 +40,29 @@ Use these in your .env file:
 - VITE_OPENROUTER_API_KEY=your_api_key_here
 - VITE_LLM_API_BASE_URL=https://api.groq.com/openai/v1
 - VITE_LLM_MODEL=llama-3.1-8b-instant
+
+Optional server-side variables for Edge TTS MP3 output:
+
+- EDGE_TTS_AUTHORIZATION=
+- EDGE_TTS_TRUSTED_CLIENT_TOKEN=
+- EDGE_TTS_COOKIE=
+- EDGE_TTS_USER_AGENT=
+- EDGE_TTS_ORIGIN=https://edge.microsoft.com
+- EDGE_TTS_REFERER=https://edge.microsoft.com/
+
+## TTS Service
+
+The TTS module is in [src/lib/ttsService.ts](src/lib/ttsService.ts) and exports:
+
+- speak(text: string)
+- generateAudioFile(text: string, filename: string)
+- stop()
+
+Behavior:
+
+- Browser speech uses Web Speech API.
+- Voice preference order is en-GB-Ryan-like -> British male hints -> any en-GB voice.
+- MP3 generation calls /api/tts/generate, which forwards SSML to the Edge synthesis endpoint.
 
 ## Free API Options
 

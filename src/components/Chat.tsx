@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import InputBox from "./InputBox";
 import Message from "./Message";
 import { getTarsReply } from "../lib/tarsApi";
+import { speak as speakTTS, stop as stopTTS } from "../lib/ttsService";
 import Waveform from "./Waveform.tsx";
 import tarsLogo from "../assets/tars.svg";
 
@@ -39,7 +40,7 @@ type AssistantCommandResult = {
   ackText?: string;
 };
 
-const DEFAULT_VOICE_PROFILE: VoiceProfile = { locale: "en-US", label: "ENGLISH (US)" };
+const DEFAULT_VOICE_PROFILE: VoiceProfile = { locale: "en-GB", label: "ENGLISH (UK)" };
 
 const DEFAULT_PERSONALITY: PersonalitySettings = {
   humor: 55,
@@ -191,7 +192,6 @@ const Chat = () => {
   const lastKaraokeScrollAtRef = useRef(0);
   const activeRequestRef = useRef<AbortController | null>(null);
   const speechJobRef = useRef(0);
-  const voicesReadyRef = useRef(false);
   const fxContextRef = useRef<AudioContext | null>(null);
   const fxSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const fxGainRef = useRef<GainNode | null>(null);
@@ -208,7 +208,7 @@ const Chat = () => {
   const interruptTarsSpeech = () => {
     if ("speechSynthesis" in window) {
       speechJobRef.current += 1;
-      window.speechSynthesis.cancel();
+      stopTTS();
       setAssistantSpeaking(false);
       setSpeakingMessageId(null);
       setSpokenWords(0);
@@ -404,48 +404,6 @@ const Chat = () => {
     return { acknowledged: false };
   };
 
-  const resolvePreferredVoice = (voices: SpeechSynthesisVoice[], lang: string) => {
-    const langLower = lang.toLowerCase();
-    const langRoot = langLower.split("-")[0];
-    const exact = voices.find((v) => v.lang.toLowerCase() === langLower);
-    if (exact) return exact;
-
-    const langRootMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langRoot));
-    if (langRootMatch) return langRootMatch;
-
-    const langRootAny = voices.find((v) => v.lang.toLowerCase().startsWith(langRoot));
-    if (langRootAny) return langRootAny;
-
-    return voices[0];
-  };
-
-  const ensureVoicesReady = async () => {
-    const synth = window.speechSynthesis;
-    const immediate = synth.getVoices();
-    if (immediate.length > 0) {
-      voicesReadyRef.current = true;
-      return immediate;
-    }
-
-    return new Promise<SpeechSynthesisVoice[]>((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        synth.removeEventListener("voiceschanged", onVoicesChanged);
-        const voices = synth.getVoices();
-        voicesReadyRef.current = voices.length > 0;
-        resolve(voices);
-      };
-
-      const onVoicesChanged = () => finish();
-      synth.addEventListener("voiceschanged", onVoicesChanged);
-      window.setTimeout(finish, 900);
-    });
-  };
-
   const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
     const viewport = viewportRef.current;
     if (!viewport) {
@@ -516,32 +474,32 @@ const Chat = () => {
     speechJobRef.current = speechJob;
     const activeLang = languageOverride ?? resolvedSpeechLang;
     const activePersona = isEnglishLocale(activeLang) ? PERSONA_PRESETS[persona] : PERSONA_PRESETS.commander;
-    const voices = await ensureVoicesReady();
-    if (speechJobRef.current !== speechJob) {
-      return;
-    }
+    const wordOffsets = toWordOffsets(speechText);
+    let fallbackTicker: number | null = null;
+    let startedAt = 0;
 
-    const speakAttempt = (fallback = false) => {
-      if (speechJobRef.current !== speechJob) {
-        return;
+    const onSpeechFinished = () => {
+      if (fallbackTicker) {
+        window.clearInterval(fallbackTicker);
+        fallbackTicker = null;
       }
 
-      const utterance = new SpeechSynthesisUtterance(speechText);
-      utterance.rate = activePersona.rate;
-      utterance.pitch = activePersona.pitch;
-      utterance.volume = 0.94;
-      utterance.lang = activeLang;
+      setAssistantSpeaking(false);
+      setSpeakingMessageId(null);
+      setSpokenWords(0);
+      stopRadioFx();
+    };
 
-      const preferredVoice = fallback ? null : resolvePreferredVoice(voices, activeLang);
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
+    await speakTTS(speechText, {
+      lang: activeLang,
+      rate: activePersona.rate,
+      pitch: activePersona.pitch,
+      volume: 0.94,
+      onStart: () => {
+        if (speechJobRef.current !== speechJob) {
+          return;
+        }
 
-      const wordOffsets = toWordOffsets(speechText);
-      let fallbackTicker: number | null = null;
-      let startedAt = 0;
-
-      utterance.onstart = () => {
         setAssistantSpeaking(true);
         setSpeakingMessageId(messageId ?? null);
         setSpokenWords(0);
@@ -551,48 +509,27 @@ const Chat = () => {
         if (wordOffsets.length > 0) {
           fallbackTicker = window.setInterval(() => {
             const elapsed = performance.now() - startedAt;
-            const perWordMs = 380 / Math.max(0.72, utterance.rate);
+            const perWordMs = 380 / Math.max(0.72, activePersona.rate);
             const estimated = Math.min(wordOffsets.length, Math.floor(elapsed / perWordMs));
             setSpokenWords((prev) => (estimated > prev ? estimated : prev));
           }, 120);
         }
 
         void startRadioFx();
-      };
-
-      utterance.onboundary = (event: SpeechSynthesisEvent) => {
-        if (event.name !== "word") {
+      },
+      onWordBoundary: (event) => {
+        if (speechJobRef.current !== speechJob) {
           return;
         }
 
         const progress = findWordProgress(event.charIndex, wordOffsets);
         setSpokenWords(progress);
-      };
-
-      const onSpeechFinished = () => {
-        if (fallbackTicker) {
-          window.clearInterval(fallbackTicker);
-          fallbackTicker = null;
-        }
-        setAssistantSpeaking(false);
-        setSpeakingMessageId(null);
-        setSpokenWords(0);
-        stopRadioFx();
-      };
-
-      utterance.onend = onSpeechFinished;
-      utterance.onerror = () => {
+      },
+      onEnd: onSpeechFinished,
+      onError: () => {
         onSpeechFinished();
-        if (!fallback) {
-          window.setTimeout(() => speakAttempt(true), 90);
-        }
-      };
-
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    };
-
-    speakAttempt(false);
+      },
+    });
   };
 
   const sendMessage = async (text: string) => {
@@ -603,7 +540,7 @@ const Chat = () => {
 
     // Secret code 143
     if (/143/.test(trimmed)) {
-      const secretMessage = "My creator Jayce loves you Jem. He created me for you.";
+       const secretMessage = "My creator Jayce thinks you are truly special, Jem. He made me just for you.";
       const secretReplyMessage = createMessage("tars", secretMessage);
       setMessages((prev) => [...prev, secretReplyMessage]);
       setTyping(false);
@@ -726,7 +663,7 @@ const Chat = () => {
   useEffect(() => {
     return () => {
       if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
+        stopTTS();
         setAssistantSpeaking(false);
       }
       stopRadioFx();
